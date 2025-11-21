@@ -1,0 +1,41 @@
+version: "3.9"
+services:
+  micfn:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: micfn-app
+    restart: always
+    expose:
+      - "8504"
+    networks:
+      - root_traefik
+      - micfn-internal
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: micfn-nginx
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    expose:
+      - "80"
+    depends_on:
+      - micfn
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.micfn-tm1.rule=Host(`tm1.anhlaptrinh.vn`)
+      - traefik.http.routers.micfn-tm1.tls=true
+      - traefik.http.routers.micfn-tm1.entrypoints=websecure
+      - traefik.http.routers.micfn-tm1.tls.certresolver=mytlschallenge
+      - traefik.http.services.micfn-tm1.loadbalancer.server.port=80
+      - traefik.docker.network=root_traefik
+    networks:
+      - root_traefik
+      - micfn-internal
+
+networks:
+  root_traefik:
+    external: true
+  micfn-internal:
+    driver: bridge
